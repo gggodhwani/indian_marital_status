@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<style>
+body
+{
+    font: 10px sans-serif;
+}
+.axis path,
+.axis line 
+{
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+.female_dot 
+{
+    stroke: none;
+}
+.male_dot 
+{
+    stroke: none;
+}
+#single
+{
+    margin-top: 0px;
+    margin-left: -25px;
+}
+#male
+{
+    margin-top: -250px;
+    margin-left: -60px;
+}
+#female
+{
+    margin-top: 250px;
+    margin-left: -105px;
+}
+.sub-title
+{
+    text-align: center;
+    font-size: 20px;  
+    margin-top: -10px;  
+    position: relative; 
+}
+#notes
+{
+    text-align: center;
+    font-size: 14px;  
+    margin-top: 35px;
+    margin-left: 180px;
+    margin-right: 160px;
+    line-height: 200%;
+}
+#heading
+{
+    text-align: center;
+    font-size: 75px;  
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+#description
+{
+    text-align: center;
+    font-size: 25px;  
+    margin-top: 40px;
+    margin-bottom: 40px;
+    margin-left: 120px;
+    margin-right: 120px;
+    line-height: 150%;
+}    
+</style>
+<body>
+    <div id="heading">India's Marital Status</div> 
+    <div id="description">Undoubtedly marriages in India are one of the much celebrated events, dramatically evoking every possible social obligation, kinship bond, traditional value, impassioned sentiment, and economic resource. In the arranging and conducting of weddings, the complex permutations of Indian social systems best display themselves. Thus for many individuals, marriage becomes a great watershed in life, marking the transition to adulthood. But with changing times, do people consider marriages a stepping tone of life? Do we still have a societally stringent age group of getting married? Do we still need a companion to support us in our dotage? In an attempt to answer such questions, here is a small data visualization to further understand India's Marital Status.    
+    </div>
+    <table>
+        <tr>    
+            <td><div id="married"></div></td>
+            <td><div id="single"></div></td>
+            <td><div class="legend" id="male"></div></td>
+            <td><div class="legend" id="female"></div></td>
+        </tr>
+        <tr>
+            <td class="sub-title">Currently Married Persons</td>
+            <td class="sub-title">Never Married Persons</td>
+        </tr>
+    </table>
+    <div id="notes">
+        <p><b>Data Source:</b> <a href="http://www.censusindia.gov.in/2011census/C-series/c-2.html">Census 2011: C-2 MARITAL STATUS BY AGE AND SEX</a></p>
+        <p><i>Note:</i> Some cells are brightened for better comparison across scales.</p>
+        <p>Special thanks to <a href="https://twitter.com/Noopur_v">Noopur Verma</a> for her invaluable suggestions and <a href="http://countrystudies.us/india/">India: A Country Study</a> by James Heitzman and Robert L. Worden as some of the words are directly borrowed from its interesting expert on marriages in India as they well depict our mindest around marriages.</p>  
+    </div>   
+</body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script>
+var margin = {top: 10, right: 40, bottom: 40, left: 180},
+    width = 800 - margin.left - margin.right,
+    height = 900 - margin.top - margin.bottom;
+
+var state_code_map = {};
+
+function get_opacity_val(data_val){
+    var opacity_val = 0;
+    if (data_val > 1.0){ 
+        opacity_val = 1.0;
+    }
+    else if (data_val < 0.09 && data_val > 0.01){
+        opacity_val = 5 * data_val;
+    }
+    else if (data_val < 0.01 && data_val > 0.005){
+        opacity_val = 10 * data_val;
+    }
+    else{
+        opacity_val = data_val;
+    }
+   return opacity_val; 
+}
+d3.csv("assets/data/csv/summary.csv", function(error, data){
+    if (error) throw error;
+    var reg = /^[0-9]+/;
+    data.forEach(function(d) {
+        d.state_code = +d.state_code;
+        state_code_map[d.state_code] = d.area_name.split("State - ")[1].split("(")[0];
+        d.age_group = +reg.exec(d.age_group)[0];
+        d.total_males = +d.total_males;
+        d.total_females = +d.total_females;
+        d.never_married_males = +d.never_married_males;
+        d.never_married_females = +d.never_married_females;
+        d.currently_married_males = +d.currently_married_males;
+        d.currently_married_females = +d.currently_married_females;
+        d.separated_males = +d.separated_males;
+        d.separated_females = +d.separated_females;
+    });
+    var x = d3.scale.linear().domain([10, 85]).range([0, width]);
+    var y = d3.scale.linear().range([height, 0]);
+
+    function get_x_tick(d){
+        if(d == 85){
+            return "";
+        }else if(d == 80){
+            return "80+"; 
+        }else{
+            return d;
+        }
+    }
+    var xAxis = d3.svg.axis().scale(x).orient("bottom").ticks(15).tickFormat(get_x_tick);;
+    var yAxis = d3.svg.axis().scale(y).orient("left").ticks(35).tickFormat(function (d) {return state_code_map[d];}).tickPadding(10);
+
+    var married_graph = d3.select("#married").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    y.domain(d3.extent(data, function(d) { return d.state_code-1; })).nice();
+    married_graph.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+        .append("text")
+        .attr("class", "label")
+        .attr("x", width)
+        .attr("dy", "3em")
+        .attr("y", 0)
+        .style("text-anchor", "end")
+        .text("Age Group for Married Persons");
+    married_graph.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .append("text")
+        .attr("class", "label")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 0)
+        .attr("dy", "2em")
+        .style("text-anchor", "end")
+        .style("font-weight", "bold");
+    married_graph.selectAll(".female_dot")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "female_dot")
+        .attr("x", function(d) { return x(d.age_group); })
+        .attr("y", function(d) { return y(d.state_code); })
+        .attr("width", 38)
+        .attr("height", 10)
+        .style("fill", "#470071")
+        .style('opacity', function(d) { return (get_opacity_val(d.currently_married_females/d.total_females))});
+    married_graph.selectAll(".male_dot")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "male_dot")
+        .attr("x", function(d) { return x(d.age_group); })
+        .attr("y", function(d) { return y(d.state_code + 0.4); })
+        .attr("width", 38)
+        .attr("height", 10)
+        .style("fill", "#f48400")
+        .style('opacity', function(d) { return (get_opacity_val(d.currently_married_males/d.total_males))});
+
+    var yAxis2 = d3.svg.axis().scale(y).orient("left").tickSize(0).ticks(0);
+    var single_graph = d3.select("#single").append("svg")
+    .attr("width", width + margin.left/2)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + 10 + "," + margin.top + ")");
+
+    y.domain(d3.extent(data, function(d) { return d.state_code; })).nice();
+    single_graph.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+        .append("text")
+        .attr("class", "label")
+        .attr("x", width)
+        .attr("dy", "2.75em")
+        .attr("y", 0)
+        .style("text-anchor", "end")
+        .text("Age Group for Never Married Persons");
+    single_graph.append("g")
+        .attr("class", "y axis")
+        .call(yAxis2)
+        .append("text")
+        .attr("class", "label")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 0)
+        .attr("dy", "2em")
+        .style("text-anchor", "end")
+    single_graph.selectAll(".female_dot")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "female_dot")
+        .attr("x", function(d) { return x(d.age_group); })
+        .attr("y", function(d) { return y(d.state_code); })
+        .attr("width", 38)
+        .attr("height", 10)
+        .style("fill", "#470071")
+        .style('opacity', function(d) { return (get_opacity_val(d.never_married_females/d.total_females))});
+    single_graph.selectAll(".male_dot")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "male_dot")
+        .attr("x", function(d) { return x(d.age_group); })
+        .attr("y", function(d) { return y(d.state_code + 0.4); })
+        .attr("width", 38)
+        .attr("height", 10)
+        .style("fill", "#f48400")
+        .style('opacity', function(d) { return (get_opacity_val(d.never_married_males/d.total_males))});
+    
+    var male = d3.select("#male").append("svg").attr("width", 100).attr("height", 100);
+    male.append("rect").attr("x", 0).attr("y", 0).attr("width", 100).attr("height", 50).style("fill", "#f48400");
+    male.append("text").attr("x", 50).attr("y", 65).attr("dy", ".35em").text("Male").style("font-size", 20).style("color", "#000000").style("text-anchor", "middle");
+    
+    var female = d3.select("#female").append("svg").attr("width", 100).attr("height", 100);
+    female.append("rect").attr("x", 0).attr("y", 0).attr("width", 100).attr("height", 50).style("fill", "#470071"); 
+    female.append("text").attr("x", 50).attr("y", 65).attr("dy", ".35em").text("Female").style("font-size", 20).style("color", "#000000").style("text-anchor", "middle");
+});
+
+</script>
